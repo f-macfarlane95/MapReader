@@ -986,6 +986,7 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
         path_save: str | None = None,
         add_to_parents: bool | None = True,
         square_cuts: bool | None = False,
+        square_pad: bool | None = True,
         resize_factor: bool | None = False,
         output_format: str | None = "png",
         rewrite: bool | None = False,
@@ -1015,6 +1016,10 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
         square_cuts : bool, optional
             If True, all patches will have the same number of pixels in
             x and y, by default ``False``.
+        square_pad : bool, optional
+            If True, all patches will have the same number of pixels in 
+            x and y, but the image will be padded with zeros to ensure non_overlapping
+            images, by default ``True``.
         resize_factor : bool, optional
             If True, resize the images before patchifying, by default ``False``.
         output_format : str, optional
@@ -1073,6 +1078,7 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
                     path_save=path_save,
                     add_to_parents=add_to_parents,
                     resize_factor=resize_factor,
+                    square_pad=square_pad,
                     output_format=output_format,
                     rewrite=rewrite,
                     verbose=verbose,
@@ -1193,6 +1199,7 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
         path_save: str,
         add_to_parents: bool | None = True,
         resize_factor: bool | None = False,
+        square_pad: bool | None = False,
         output_format: str | None = "png",
         rewrite: bool | None = False,
         verbose: bool | None = False,
@@ -1235,16 +1242,34 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
                 )
             )
 
+        if square_pad:
+            
+            new_height = int(patch_size * np.ceil(img.height/patch_size))
+            new_width = int(patch_size * np.ceil(img.width/patch_size))
+
+            print(img.height, img.width, new_height, new_width)
+
+            new_img = self._add_margin(img,0,new_width-img.width,new_height-img.height,0,(0,0,0))
+
+            img = new_img
+
+
         height, width = img.height, img.width
+
+        print(height,width)
 
         for x in range(0, width, patch_size):
             for y in range(0, height, patch_size):
                 max_x = min(x + patch_size, width)
                 max_y = min(y + patch_size, height)
 
-                # move min_x and min_y back a bit so the patch is square
-                min_x = x - (patch_size - (max_x - x))
-                min_y = y - (patch_size - (max_y - y))
+                if (not square_pad):  # move min_x and min_y back a bit so the patch is square
+                    min_x = x - (patch_size - (max_x - x))
+                    min_y = y - (patch_size - (max_y - y))
+
+                else:
+                    min_x = x
+                    min_y = y
 
                 patch_id = f"patch-{min_x}-{min_y}-{max_x}-{max_y}-#{image_id}#.{output_format}"
                 patch_path = os.path.join(path_save, patch_id)

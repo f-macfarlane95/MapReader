@@ -119,7 +119,11 @@ class TileDownloader:
         ]
 
         self._update_progressbar(0.0)
-        parallel_pool = Parallel(n_jobs=-1)
+        n_jobs=16
+        timeout=1500
+        print(n_jobs,timeout)
+        parallel_pool = Parallel(n_jobs=n_jobs)
+        # parallel_pool = Parallel(n_jobs=32)
         parallel_pool(delayed_downloads)
         self._update_progressbar(1.0)
 
@@ -202,14 +206,34 @@ def _trigger_download(url: str, file_path: str):
     """
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
     headers = {"User-Agent": user_agent}
+    i = 0
+    num_retries=10
+    # while i<num_retries:
 
-    try:
-        request = urllib.request.Request(url, None, headers)
-        response = urllib.request.urlopen(request)
-        data = response.read()
+    #     try:
+    #         print(url)
+    #         request = urllib.request.Request(url, None, headers)
+    #         response = urllib.request.urlopen(request)
+    #         data = response.read()
 
-        with open(file_path, "wb") as f:
-            f.write(data)
+    #         with open(file_path, "wb") as f:
+    #             f.write(data)
 
-    except:
-        print(f"[WARNING] {url} not found.")
+    #     except Exception as error:
+    #         print(f"An error occurred:, {error} [WARNING] {url} not found. Retry ({i}/{num_retries})\n")
+    #         i+=1
+
+    while i<num_retries:
+        try:
+            request = urllib.request.Request(url, None, headers)
+            response = urllib.request.urlopen(request)
+            data = response.read()
+
+            with open(file_path, "wb") as f:
+                f.write(data)
+            break
+
+        except Exception as error:
+            print(f"An error occurred:, {error} [WARNING] {url} not found. Retry ({i}/{num_retries})\n")
+            i+=1
+
