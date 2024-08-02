@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import urllib.request
+from urllib.error import HTTPError
 
 from joblib import Parallel, delayed
 from tqdm import tqdm
@@ -231,9 +232,17 @@ def _trigger_download(url: str, file_path: str):
 
             with open(file_path, "wb") as f:
                 f.write(data)
-            break
+            break  # Successfully downloaded and saved the file, exit the loop
+
+        except HTTPError as error:
+            if error.code == 404:
+                print(f"HTTP Error 404: Not Found - {url}. Exiting the loop.")
+                break  # Exit the loop on a 404 error
+            else:
+                print(f"An HTTP error occurred: {error.code}. Retry ({i}/{num_retries})")
+                i += 1
 
         except Exception as error:
-            print(f"An error occurred:, {error} [WARNING] {url} not found. Retry ({i}/{num_retries})\n")
-            i+=1
+            print(f"An error occurred: {error}. Retry ({i}/{num_retries})")
+            i += 1
 
