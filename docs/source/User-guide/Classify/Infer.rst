@@ -10,6 +10,7 @@ To initialize your ``ClassifierContainer()`` for inference, you will need to def
 
 - ``model`` - The model (classifier) you would like to use.
 - ``labels_map`` - A dictionary mapping your labels to their indices (e.g. ``{0: "no_railspace", 1: "railspace"}``). This labels map should be the same as that used when training/fine-tuning the classifier.
+- ``device`` - The device you would like to use for inference (e.g. ``"cuda"``, ``"mps"`` or ``"cpu"``).
 
 There are a number of options for the ``model`` argument:
 
@@ -29,7 +30,9 @@ There are a number of options for the ``model`` argument:
             my_model = torch.load("./models/model_checkpoint_6.pkl")
             labels_map = {0: "no_railspace", 1: "railspace"}
 
-            my_classifier = ClassifierContainer(my_model, labels_map)
+            device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+
+            my_classifier = ClassifierContainer(my_model, labels_map, device=device)
 
         .. admonition:: Advanced usage
             :class: dropdown
@@ -56,13 +59,16 @@ There are a number of options for the ``model`` argument:
         .. code-block:: python
 
             #EXAMPLE
+            import torch
             from transformers import AutoFeatureExtractor, AutoModelForImageClassification
 
             extractor = AutoFeatureExtractor.from_pretrained("davanstrien/autotrain-mapreader-5000-40830105612")
             my_model = AutoModelForImageClassification.from_pretrained("davanstrien/autotrain-mapreader-5000-40830105612")
             labels_map = {0: "no_railspace", 1: "railspace"}
 
-            my_classifier = ClassifierContainer(my_model, labels_map)
+            device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+
+            my_classifier = ClassifierContainer(my_model, labels_map, device=device)
 
         .. note:: You will need to install the `transformers <https://github.com/huggingface/transformers>`__ library to do this (``pip install transformers``).
 
@@ -73,10 +79,14 @@ There are a number of options for the ``model`` argument:
 
             #EXAMPLE
             import timm
+            import torch
 
             my_model = timm.create_model("hf_hub:timm/resnest101e.in1k", pretrained=True, num_classes=len(annotated_images.labels_map))
+            labels_map = {0: "no_railspace", 1: "railspace"}
 
-            my_classifier = ClassifierContainer(my_model, annotated_images.labels_map, dataloaders)
+            device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+
+            my_classifier = ClassifierContainer(my_model, labels_map, device=device)
 
         .. note:: You will need to install the `timm <https://huggingface.co/docs/timm/index>`__ library to do this (``pip install timm``).
 
@@ -124,37 +134,24 @@ As with the "test" dataset, to see a sample of your predictions, use:
 
     my_classifier.show_inference_sample_results(label="railspace", set_name="infer")
 
+
+Save predictions
+~~~~~~~~~~~~~~~~~
+
+To save your predictions, use the ``.save_predictions()`` method.
+e.g. to save your predictions on the "infer" dataset:
+
+.. code-block:: python
+
+    my_classifier.save_predictions(set_name="infer")
+
+
 Add predictions to metadata and save
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To add your predictions to your patch metadata (saved in ``patch_df.csv``), you will need to add your predictions and confidence values to your ``infer`` dataset's dataframe.
+To add your predictions to your patch metadata (saved in ``patch_df.csv``), you will need to load your predictions as metadata in the ``MapImages`` object.
 
-This dataframe is saved as the datasets ``patch_df`` attribute.
-To view it, use:
-
-.. code-block:: python
-
-    infer.patch_df
-
-To add your predictions and confidence values to this dataframe use:
-
-.. code-block:: python
-
-    import numpy as np
-
-    infer.patch_df['predicted_label'] = my_classifier.pred_label
-    infer.patch_df['pred'] = my_classifier.pred_label_indices
-    infer.patch_df['conf'] = np.array(my_classifier.pred_conf).max(axis=1)
-
-If you view your dataframe again (by running ``infer.patch_df`` as above), you will see your predictions and confidence values have been added as columns.
-
-From here, you can either save your results using:
-
-.. code-block:: python
-
-    infer.patch_df.to_csv("predictions_patch_df.csv", sep=",")
-
-Or, you can use the ``MapImages`` object to create some visualizations of your results:
+To do this, you will need to create a new ``MapImages`` object and load in your patches and parent images:
 
 .. code-block:: python
 
@@ -162,8 +159,23 @@ Or, you can use the ``MapImages`` object to create some visualizations of your r
 
     my_maps = load_patches(patch_paths = "./path/to/patches/*png", parent_paths="./path/to/parents/*png")
 
-    infer_df = infer.patch_df.reset_index(names="image_id") # ensure image_id is one of the columns
-    my_maps.add_metadata(infer_df, tree_level='patch') # add dataframe as metadata
+You can then add your predictions to the metadata using the ``.add_metadata()`` method:
+
+.. code-block:: python
+
+    my_maps.add_metadata("path_to_predictions_patch_df.csv", tree_level='patch') # add dataframe as metadata
+
+For example, to load the predictions for the "infer" dataset:
+
+.. code-block:: python
+
+    #EXAMPLE
+    my_maps.add_metadata("./infer_predictions_patch_df.csv", tree_level='patch')
+
+From here, you can use the ``.show_parent()`` method to visualize your predictions on the parent images as shown in the :doc:`Load </User-guide/Load>` user guide:
+
+.. code-block:: python
+
     my_maps.add_shape()
 
     parent_list = my_maps.list_parents()
