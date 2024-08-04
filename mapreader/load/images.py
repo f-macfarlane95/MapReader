@@ -1281,10 +1281,14 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
         print(height,width)
         # print(int(patch_size * overlap))
         print(overlap)
+        overlap_pixels = int(patch_size * overlap)
+
+        print(f"width: {width} height: {height} maxwidth: {width-(patch_size-1)} maxheight: {height-(patch_size-1)}")
+
         x = 0
-        while x < width:
+        while x < width-(overlap_pixels+1):
             y = 0
-            while y < height:
+            while y < height-(overlap_pixels+1):
                 max_x = min(x + patch_size, width)
                 max_y = min(y + patch_size, height)
 
@@ -1324,7 +1328,6 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
                     self._add_patch_coords_id(patch_id)
                     self._add_patch_polygons_id(patch_id)
 
-                overlap_pixels = int(patch_size * overlap)
                 y = y + patch_size - overlap_pixels
             x = x + patch_size - overlap_pixels
 
