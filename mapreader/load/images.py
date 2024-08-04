@@ -1085,6 +1085,7 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
                     output_format=output_format,
                     rewrite=rewrite,
                     verbose=verbose,
+                    overlap=overlap,
                 )
 
             else:
@@ -1160,7 +1161,7 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
             )
 
         height, width = img.height, img.width
-
+        print(overlap)
         x = 0
         while x < width:
             y = 0
@@ -1221,6 +1222,7 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
         output_format: str | None = "png",
         rewrite: bool | None = False,
         verbose: bool | None = False,
+        overlap: int | None = 0,
     ):
         """Patchify one image and (if ``add_to_parents=True``) add the patch to the MapImages instance's ``images`` dictionary.
         Use square cuts for patches at edges.
@@ -1245,6 +1247,8 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
         verbose : bool, optional
             If True, progress updates will be printed throughout, by default
             ``False``.
+        overlap : int, optional
+            Fractional overlap between patches, by default ``0``.
         """
         tree_level = self._get_tree_level(image_id)
 
@@ -1275,9 +1279,12 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
         height, width = img.height, img.width
 
         print(height,width)
-
-        for x in range(0, width, patch_size):
-            for y in range(0, height, patch_size):
+        # print(int(patch_size * overlap))
+        print(overlap)
+        x = 0
+        while x < width:
+            y = 0
+            while y < height:
                 max_x = min(x + patch_size, width)
                 max_y = min(y + patch_size, height)
 
@@ -1316,6 +1323,10 @@ See https://pillow.readthedocs.io/en/stable/handbook/concepts.html#modes for mor
                     )
                     self._add_patch_coords_id(patch_id)
                     self._add_patch_polygons_id(patch_id)
+
+                overlap_pixels = int(patch_size * overlap)
+                y = y + patch_size - overlap_pixels
+            x = x + patch_size - overlap_pixels
 
     def _add_patch_to_parent(self, patch_id: str) -> None:
         """
